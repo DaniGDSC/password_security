@@ -1,0 +1,39 @@
+[2025-03-24 00:10:21] 
+Test Case 1:
+[2025-03-24 00:10:21] Input: Short message
+[2025-03-24 00:10:21] Input size: 13 bytes
+[2025-03-24 00:10:21] Key Expansion - Time: 0.000360s, Peak Memory: 0.96 KB
+[2025-03-24 00:10:21] Single Block Encryption (16 bytes) - Time: 0.001156s, Peak Memory: 1.38 KB
+[2025-03-24 00:10:21] Full Encryption - Time: 0.001098s, Peak Memory: 2.00 KB
+[2025-03-24 00:10:21] Output size: 16 bytes
+[2025-03-24 00:10:21] Number of blocks: 1
+[2025-03-24 00:10:21] Estimated Time Complexity: O(n) where n is input size
+[2025-03-24 00:10:21] Throughput: 11839.71 bytes/second
+[2025-03-24 00:10:21] Ciphertext (hex): 510c208cb4daa8832f5bfee27510775c
+[2025-03-24 00:10:21] --------------------------------------------------
+[2025-03-24 00:10:21] 
+Test Case 2:
+[2025-03-24 00:10:21] Input: Exactly 16 bytes here!!!
+[2025-03-24 00:10:21] Input size: 24 bytes
+[2025-03-24 00:10:21] Key Expansion - Time: 0.000329s, Peak Memory: 0.96 KB
+[2025-03-24 00:10:21] Single Block Encryption (16 bytes) - Time: 0.001039s, Peak Memory: 1.03 KB
+[2025-03-24 00:10:21] Full Encryption - Time: 0.002214s, Peak Memory: 1.43 KB
+[2025-03-24 00:10:21] Output size: 32 bytes
+[2025-03-24 00:10:21] Number of blocks: 2
+[2025-03-24 00:10:21] Estimated Time Complexity: O(n) where n is input size
+[2025-03-24 00:10:21] Throughput: 10839.13 bytes/second
+[2025-03-24 00:10:21] Ciphertext (hex): 4ed2aa0063757d766dbff0fe7e79bcdc5fc7c92970e46847136d5a61dd42bf1d
+[2025-03-24 00:10:21] --------------------------------------------------
+[2025-03-24 00:10:21] 
+Test Case 3:
+[2025-03-24 00:10:21] Input: This is a much longer message that will require multiple blocks to encrypt
+[2025-03-24 00:10:21] Input size: 74 bytes
+[2025-03-24 00:10:21] Key Expansion - Time: 0.000330s, Peak Memory: 0.96 KB
+[2025-03-24 00:10:21] Single Block Encryption (16 bytes) - Time: 0.001144s, Peak Memory: 0.64 KB
+[2025-03-24 00:10:21] Full Encryption - Time: 0.005326s, Peak Memory: 1.62 KB
+[2025-03-24 00:10:21] Output size: 80 bytes
+[2025-03-24 00:10:21] Number of blocks: 5
+[2025-03-24 00:10:21] Estimated Time Complexity: O(n) where n is input size
+[2025-03-24 00:10:21] Throughput: 13893.58 bytes/second
+[2025-03-24 00:10:21] Ciphertext (hex): 37588372c6effbff549719e1b8ab897ae3cba981e2f3baead02e719b26e5e940662c2af9f6a1abf222007033fe3343feaf2a1ccdf11f27f3a6068fd95fd8377601c561a67e3233f566ad1da40eb7deba
+[2025-03-24 00:10:21] --------------------------------------------------
