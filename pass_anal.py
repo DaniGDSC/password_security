@@ -1,69 +1,50 @@
 import math
 import re
-from nltk.corpus import words
 import csv
 from collections import Counter
+from nltk.corpus import words
 
-# Download NLTK words (first-time use)
-try:
-    words.words()
-except LookupError:
-    import nltk
-    nltk.download('words')
+# Ensure NLTK words corpus is downloaded
+def ensure_nltk_words():
+    try:
+        words.words()
+    except LookupError:
+        import nltk
+        nltk.download('words')
 
-#get passwords from password.csv
+# Read passwords from a CSV file
 def get_passwords(filename="passwords.csv"):
     try:
         with open(filename, "r", newline="") as f:
-            reader = csv.reader(f)
-            passwords = [row[0] for row in reader]
-        return passwords
+            return [row[0] for row in csv.reader(f)]
     except FileNotFoundError:
         print(f"File {filename} not found.")
         return []
 
+# Calculate Shannon entropy of a password
 def shannon_entropy(password):
     if not password:
         return 0
-    # Calculate frequency of each character
     char_freq = Counter(password)
     length = len(password)
-    # Shannon entropy formula
-    entropy = -sum((freq / length) * math.log2(freq / length) for freq in char_freq.values())
-    return entropy
+    return -sum((freq / length) * math.log2(freq / length) for freq in char_freq.values())
 
-
-def password_strength(password):
-    """Analyzes password strength and provides a score"""
-
-    # Check password length
-    length_score = min(len(password) / 4, 5)  # Max score 5 for length
-    
-    # Character type check
+# Analyze password strength
+def password_strength(password, word_list):
+    length_score = min(len(password) / 4, 5)  # Max score 5
     char_types = [r"[A-Z]", r"[a-z]", r"\d", r"[!@#$%^&*(),.?\":{}|<>]"]
     char_score = sum(bool(re.search(pattern, password)) for pattern in char_types) * 2  # Max 8 points
-    
-    # Check for dictionary words
-    word_list = words.words()
-    words_in_password = any(word.lower() in word_list for word in password.split())
-    dictionary_penalty = -5 if words_in_password else 0  # Penalize for dictionary words
-
-    # Entropy calculation
+    dictionary_penalty = -5 if any(word.lower() in word_list for word in password.split()) else 0
     entropy = shannon_entropy(password)
     entropy_score = min(entropy / 2, 5)  # Max 5 points
-
-    # Overall score (max 18, min 0)
     total_score = max(0, length_score + char_score + entropy_score + dictionary_penalty)
 
-    # Strength Rating
-    if total_score >= 15:
-        strength = "Very Strong 💪"
-    elif total_score >= 10:
-        strength = "Strong ✅"
-    elif total_score >= 6:
-        strength = "Moderate ⚠"
-    else:
-        strength = "Weak ❌"
+    strength = (
+        "Very Strong 💪" if total_score >= 15 else
+        "Strong ✅" if total_score >= 10 else
+        "Moderate ⚠" if total_score >= 6 else
+        "Weak ❌"
+    )
 
     return {
         "password": password,
@@ -76,23 +57,10 @@ def password_strength(password):
         "strength": strength
     }
 
-def main():
-    if not words.words():
-        print("Word list not found. Please download the NLTK words corpus.")
-        return
-    
-    # Read passwords from file
-    passwords = get_passwords()
-    if not passwords:
-        print("No passwords found in passwords.csv.")
-        return
-    
-    # Analyze password strength
-    results = [password_strength(password) for password in passwords]
-
-    # Print results
+# Print password analysis results
+def print_results(results):
     print("\nPassword Strength Analysis:")
-    print("-" * 50) 
+    print("-" * 50)
     for result in results:
         print(f"Password: {result['password']}")
         print(f"Length Score: {result['length_score']:.2f}")
@@ -104,6 +72,18 @@ def main():
         print(f"Strength: {result['strength']}")
         print("-" * 50)
 
+# Main function
+def main():
+    ensure_nltk_words()
+    word_list = set(words.words())
+    passwords = get_passwords()
 
-    if __name__ == "__main__":
-        main()
+    if not passwords:
+        print("No passwords found in passwords.csv.")
+        return
+
+    results = [password_strength(password, word_list) for password in passwords]
+    print_results(results)
+
+if __name__ == "__main__":
+    main()
