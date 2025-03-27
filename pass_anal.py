@@ -76,10 +76,34 @@ def password_strength(password):
         "strength": strength
     }
 
-# Example usage
-password = input("Enter a password to analyze: ")
-result = password_strength(password)
+def main():
+    if not words.words():
+        print("Word list not found. Please download the NLTK words corpus.")
+        return
+    
+    # Read passwords from file
+    passwords = get_passwords()
+    if not passwords:
+        print("No passwords found in passwords.csv.")
+        return
+    
+    # Analyze password strength
+    results = [password_strength(password) for password in passwords]
 
-print("\nPassword Strength Analysis:")
-for key, value in result.items():
-    print(f"{key}: {value}")
+    # Print results
+    print("\nPassword Strength Analysis:")
+    print("-" * 50) 
+    for result in results:
+        print(f"Password: {result['password']}")
+        print(f"Length Score: {result['length_score']:.2f}")
+        print(f"Character Score: {result['char_score']:.2f}")
+        print(f"Entropy: {result['entropy']:.2f}")
+        print(f"Entropy Score: {result['entropy_score']:.2f}")
+        print(f"Dictionary Penalty: {result['dictionary_penalty']:.2f}")
+        print(f"Total Score: {result['total_score']:.2f}")
+        print(f"Strength: {result['strength']}")
+        print("-" * 50)
+
+
+    if __name__ == "__main__":
+        main()
