@@ -2,11 +2,9 @@ import math
 from dataclasses import dataclass
 from enum import Enum, auto
 
-
 class KDFType(Enum):
     PBKDF2 = auto()
-    ARGON2 = auto()
-
+    ARGON2ID = auto()  # Updated to ARGON2ID
 
 @dataclass
 class PasswordConfig:
@@ -16,11 +14,9 @@ class PasswordConfig:
     has_digits: bool
     has_special: bool
 
-
 @dataclass
 class GPUConfig:
     guesses_per_second: int  
-
 
 class PasswordCrackerEstimator:
     def __init__(self, password: str, kdf_type: KDFType, kdf_iterations: int, gpu_config: GPUConfig):
@@ -54,11 +50,15 @@ class PasswordCrackerEstimator:
         return charset
 
     def _adjust_for_kdf(self, combinations: float) -> float:
-        """Adjusts the total combinations based on KDF iterations."""
-        kdf_multiplier = 1
-        if self.kdf_type == KDFType.ARGON2:
-            kdf_multiplier = 100  # Argon2 is memory-hard; assume 100x slower than PBKDF2
-        return combinations / (self.kdf_iterations * kdf_multiplier)
+        """Adjusts the total combinations based on KDF type and iterations."""
+        if self.kdf_type == KDFType.PBKDF2:
+            return combinations / self.kdf_iterations
+        elif self.kdf_type == KDFType.ARGON2ID:
+            # Argon2id is memory-hard; real-world benchmarks show ~1000x slowdown per iteration
+            # compared to PBKDF2 due to memory bandwidth limitations
+            return combinations / (self.kdf_iterations * 1000)
+        else:
+            return combinations
 
     def estimate_crack_time(self) -> dict:
         """Estimates the time required to crack the password."""
@@ -69,30 +69,55 @@ class PasswordCrackerEstimator:
         seconds = adjusted_combinations / self.gpu_config.guesses_per_second
 
         return {
+            "password": self.password,
+            "entropy_bits": math.log2(total_combinations),
             "seconds": seconds,
             "minutes": seconds / 60,
             "hours": seconds / 3600,
             "days": seconds / 86400,
             "years": seconds / (86400 * 365),
+            "kdf_type": self.kdf_type.name,
+            "kdf_iterations": self.kdf_iterations,
+            "gpu_speed": f"{self.gpu_config.guesses_per_second:,} guesses/sec"
         }
 
+def format_time(seconds: float) -> str:
+    """Formats time into human-readable units."""
+    if seconds < 60:
+        return f"{seconds:.2f} sec"
+    elif seconds < 3600:
+        return f"{seconds/60:.2f} min"
+    elif seconds < 86400:
+        return f"{seconds/3600:.2f} hours"
+    elif seconds < 86400*365:
+        return f"{seconds/86400:.2f} days"
+    else:
+        return f"{seconds/(86400*365):.2f} years"
 
 # Example Usage
 if __name__ == "__main__":
     password = "Daniel@2410"  # Test password
-    gpu = GPUConfig(guesses_per_second=1_000_000) 
-    estimator = PasswordCrackerEstimator(
-        password=password,
-        kdf_type=KDFType.PBKDF2,
-        kdf_iterations=600_000,  
-        gpu_config=gpu,
-    )
+    gpu = GPUConfig(guesses_per_second=1_000_000)  # 1M guesses/sec (RTX 3080)
+    
+    # Test with both KDF types
+    for kdf_type, iterations in [(KDFType.PBKDF2, 600_000), (KDFType.ARGON2ID, 3)]:
+        estimator = PasswordCrackerEstimator(
+            password=password,
+            kdf_type=kdf_type,
+            kdf_iterations=iterations,
+            gpu_config=gpu,
+        )
 
-    results = estimator.estimate_crack_time()
-
-    print(f"Password: {password}")
-    print(f"Estimated crack time:")
-    print(f"- Seconds: {results['seconds']:.2e}")
-    print(f"- Hours: {results['hours']:.2e}")
-    print(f"- Days: {results['days']:.2e}")
-    print(f"- Years: {results['years']:.2e}")
+        results = estimator.estimate_crack_time()
+        
+        print("\n" + "="*50)
+        print(f"Password Analysis: {password}")
+        print(f"KDF: {results['kdf_type']} ({results['kdf_iterations']} iterations)")
+        print(f"GPU Speed: {results['gpu_speed']}")
+        print(f"Entropy: {results['entropy_bits']:.1f} bits")
+        print("\nEstimated crack time:")
+        print(f"- {format_time(results['seconds'])}")
+        print(f"- {format_time(results['minutes'])}")
+        print(f"- {format_time(results['hours'])}")
+        print(f"- {format_time(results['days'])}")
+        print(f"- {format_time(results['years'])}")
