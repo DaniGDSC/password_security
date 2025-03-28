@@ -17,7 +17,7 @@ def ensure_nltk_words() -> None:
         nltk.download('words')
 
 
-def get_passwords_from_csv(filename: str = "passwords.csv") -> List[str]:
+def get_passwords_from_csv(filename: str = "database/pass_manager/passwords.csv") -> List[str]:
     """
     Read passwords from a CSV file.
 
