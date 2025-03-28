@@ -2,9 +2,11 @@ import math
 from dataclasses import dataclass
 from enum import Enum, auto
 
+
 class KDFType(Enum):
     PBKDF2 = auto()
-    ARGON2ID = auto()  # Updated to ARGON2ID
+    ARGON2ID = auto()
+
 
 @dataclass
 class PasswordConfig:
@@ -14,9 +16,11 @@ class PasswordConfig:
     has_digits: bool
     has_special: bool
 
+
 @dataclass
 class GPUConfig:
-    guesses_per_second: int  
+    guesses_per_second: int
+
 
 class PasswordCrackerEstimator:
     def __init__(self, password: str, kdf_type: KDFType, kdf_iterations: int, gpu_config: GPUConfig):
@@ -24,9 +28,9 @@ class PasswordCrackerEstimator:
         self.kdf_type = kdf_type
         self.kdf_iterations = kdf_iterations
         self.gpu_config = gpu_config
-        self.password_config = self._get_password_config()
+        self.password_config = self._analyze_password()
 
-    def _get_password_config(self) -> PasswordConfig:
+    def _analyze_password(self) -> PasswordConfig:
         """Analyzes the password and returns its configuration."""
         return PasswordConfig(
             length=len(self.password),
@@ -40,31 +44,28 @@ class PasswordCrackerEstimator:
         """Calculates the size of the character set based on password configuration."""
         charset = 0
         if self.password_config.has_lowercase:
-            charset += 26  # a-z
+            charset += 26
         if self.password_config.has_uppercase:
-            charset += 26  # A-Z
+            charset += 26
         if self.password_config.has_digits:
-            charset += 10  # 0-9
+            charset += 10
         if self.password_config.has_special:
-            charset += 32  # Common special chars
+            charset += 32
         return charset
 
-    def _adjust_for_kdf(self, combinations: float) -> float:
+    def _apply_kdf_adjustment(self, combinations: float) -> float:
         """Adjusts the total combinations based on KDF type and iterations."""
         if self.kdf_type == KDFType.PBKDF2:
             return combinations / self.kdf_iterations
-        elif self.kdf_type == KDFType.ARGON2ID:
-            # Argon2id is memory-hard; real-world benchmarks show ~1000x slowdown per iteration
-            # compared to PBKDF2 due to memory bandwidth limitations
+        if self.kdf_type == KDFType.ARGON2ID:
             return combinations / (self.kdf_iterations * 1000)
-        else:
-            return combinations
+        return combinations
 
     def estimate_crack_time(self) -> dict:
         """Estimates the time required to crack the password."""
         charset_size = self._calculate_charset_size()
         total_combinations = charset_size ** self.password_config.length
-        adjusted_combinations = self._adjust_for_kdf(total_combinations)
+        adjusted_combinations = self._apply_kdf_adjustment(total_combinations)
 
         seconds = adjusted_combinations / self.gpu_config.guesses_per_second
 
@@ -78,28 +79,33 @@ class PasswordCrackerEstimator:
             "years": seconds / (86400 * 365),
             "kdf_type": self.kdf_type.name,
             "kdf_iterations": self.kdf_iterations,
-            "gpu_speed": f"{self.gpu_config.guesses_per_second:,} guesses/sec"
+            "gpu_speed": f"{self.gpu_config.guesses_per_second:,} guesses/sec",
         }
+
 
 def format_time(seconds: float) -> str:
     """Formats time into human-readable units."""
     if seconds < 60:
         return f"{seconds:.2f} sec"
     elif seconds < 3600:
-        return f"{seconds/60:.2f} min"
+        minutes = seconds / 60
+        return f"{minutes:.2f} min"
     elif seconds < 86400:
-        return f"{seconds/3600:.2f} hours"
-    elif seconds < 86400*365:
-        return f"{seconds/86400:.2f} days"
+        hours = seconds / 3600
+        return f"{hours:.2f} hours"
+    elif seconds < 86400 * 365:
+        days = seconds / 86400
+        return f"{days:.2f} days"
     else:
-        return f"{seconds/(86400*365):.2f} years"
+        years = seconds / (86400 * 365)
+        return f"{years:.2f} years"
 
-# Example Usage
-if __name__ == "__main__":
-    password = "Daniel@2410"  # Test password
-    gpu = GPUConfig(guesses_per_second=1_000_000)  # 1M guesses/sec (RTX 3080)
-    
-    # Test with both KDF types
+
+def main():
+    """Main function to demonstrate password cracking estimation."""
+    password = "HowManY3E1I4agC"
+    gpu = GPUConfig(guesses_per_second=10_000_000)
+
     for kdf_type, iterations in [(KDFType.PBKDF2, 600_000), (KDFType.ARGON2ID, 3)]:
         estimator = PasswordCrackerEstimator(
             password=password,
@@ -109,15 +115,19 @@ if __name__ == "__main__":
         )
 
         results = estimator.estimate_crack_time()
-        
-        print("\n" + "="*50)
+
+        print("\n" + "=" * 50)
         print(f"Password Analysis: {password}")
         print(f"KDF: {results['kdf_type']} ({results['kdf_iterations']} iterations)")
         print(f"GPU Speed: {results['gpu_speed']}")
         print(f"Entropy: {results['entropy_bits']:.1f} bits")
         print("\nEstimated crack time:")
-        print(f"- {format_time(results['seconds'])}")
-        print(f"- {format_time(results['minutes'])}")
-        print(f"- {format_time(results['hours'])}")
-        print(f"- {format_time(results['days'])}")
-        print(f"- {format_time(results['years'])}")
+        print(f"- {results['seconds']:.2f} sec")
+        print(f"- {results['minutes']:.2f} min")
+        print(f"- {results['hours']:.2f} hours")
+        print(f"- {results['days']:.2f} days")
+        print(f"- {results['years']:.2f} years")
+
+
+if __name__ == "__main__":
+    main()
