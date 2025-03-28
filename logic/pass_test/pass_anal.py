@@ -3,45 +3,32 @@ import re
 import csv
 from collections import Counter
 from typing import List, Dict, Union
+import nltk
 from nltk.corpus import words
 
-
 def ensure_nltk_words() -> None:
-    """
-    Ensure the NLTK words corpus is downloaded.
-    """
     try:
         words.words()
     except LookupError:
-        import nltk
         nltk.download('words')
 
-
-def get_passwords_from_csv(filename: str = "database/pass_manager/passwords.csv") -> List[str]:
-    """
-    Read passwords from a CSV file.
-
-    Args:
-        filename (str): Path to the CSV file containing passwords.
-
-    Returns:
-        List[str]: List of passwords.
-    """
+def read_passwords_from_csv(filename: str) -> List[str]:
     try:
-        with open(filename, "r", newline="") as f:
-            return [row[0] for row in csv.reader(f)]
+        with open(filename, "r", newline="") as file:
+            reader = csv.reader(file)
+            rows = list(reader)
+            if not rows:
+                print(f"File {filename} is empty.")
+                return []
+            return [row[0] for row in rows if row]
     except FileNotFoundError:
         print(f"File {filename} not found.")
         return []
+    except csv.Error:
+        print(f"Error reading CSV file {filename}.")
+        return []
 
-
-def get_passwords_from_input() -> List[str]:
-    """
-    Collect passwords from user input.
-
-    Returns:
-        List[str]: List of passwords entered by the user.
-    """
+def collect_passwords_from_user() -> List[str]:
     passwords = []
     while True:
         password = input("Enter a password (or press Enter to finish): ")
@@ -50,53 +37,40 @@ def get_passwords_from_input() -> List[str]:
         passwords.append(password)
     return passwords
 
-
-def get_user_option() -> str:
-    """
-    Display options to the user and get their choice.
-
-    Returns:
-        str: The user's chosen option.
-    """
+def get_user_choice() -> str:
     print("1. Read passwords from a CSV file")
     print("2. Enter passwords manually")
-    return input("Choose an option: ")
-
+    while True:
+        choice = input("Choose an option (1 or 2): ")
+        if choice in ("1", "2"):
+            return choice
+        print("Please enter either 1 or 2.")
 
 def calculate_shannon_entropy(password: str) -> float:
-    """
-    Calculate the Shannon entropy of a password.
-
-    Args:
-        password (str): The password to analyze.
-
-    Returns:
-        float: The Shannon entropy of the password.
-    """
     if not password:
         return 0.0
     char_freq = Counter(password)
     length = len(password)
     return -sum((freq / length) * math.log2(freq / length) for freq in char_freq.values())
 
-
-def analyze_password_strength(password: str, word_list: set) -> Dict[str, Union[float, str]]:
-    """
-    Analyze the strength of a password.
-
-    Args:
-        password (str): The password to analyze.
-        word_list (set): A set of dictionary words.
-
-    Returns:
-        Dict[str, Union[float, str]]: Analysis results for the password.
-    """
-    length_score = min(len(password) / 4, 5)  # Max score 5
+def analyze_password(password: str, word_list: set) -> Dict[str, Union[float, str]]:
+    if not password:
+        return {
+            "password": password,
+            "length_score": 0.0,
+            "char_score": 0.0,
+            "entropy": 0.0,
+            "entropy_score": 0.0,
+            "dictionary_penalty": 0.0,
+            "total_score": 0.0,
+            "strength": "Invalid (Empty) 🚫"
+        }
+    length_score = min(len(password) / 4, 5)
     char_types = [r"[A-Z]", r"[a-z]", r"\d", r"[!@#$%^&*(),.?\":{}|<>]"]
-    char_score = sum(bool(re.search(pattern, password)) for pattern in char_types) * 2  # Max 8 points
-    dictionary_penalty = -5 if any(word.lower() in word_list for word in password.split()) else 0
+    char_score = sum(bool(re.search(pattern, password)) for pattern in char_types) * 2
+    dictionary_penalty = -5 if password.lower() in word_list else 0
     entropy = calculate_shannon_entropy(password)
-    entropy_score = min(entropy / 2, 5)  # Max 5 points
+    entropy_score = min(entropy / 2, 5)
     total_score = max(0, length_score + char_score + entropy_score + dictionary_penalty)
 
     strength = (
@@ -117,14 +91,7 @@ def analyze_password_strength(password: str, word_list: set) -> Dict[str, Union[
         "strength": strength
     }
 
-
-def display_results(results: List[Dict[str, Union[float, str]]]) -> None:
-    """
-    Display the password analysis results.
-
-    Args:
-        results (List[Dict[str, float | str]]): List of password analysis results.
-    """
+def display_analysis_results(results: List[Dict[str, Union[float, str]]]) -> None:
     print("\nPassword Strength Analysis:")
     print("-" * 50)
     for result in results:
@@ -138,26 +105,26 @@ def display_results(results: List[Dict[str, Union[float, str]]]) -> None:
         print(f"Strength: {result['strength']}")
         print("-" * 50)
 
-
 def main() -> None:
-    """
-    Main function to execute the password strength analysis.
-    """
     ensure_nltk_words()
     word_list = set(words.words())
 
-    option = get_user_option()
+    option = get_user_choice()
     if option == "1":
-        passwords = get_passwords_from_csv()
+        filename = input("Enter the path to the CSV file: ")
+        passwords = read_passwords_from_csv(filename)
     elif option == "2":
-        passwords = get_passwords_from_input()
+        passwords = collect_passwords_from_user()
     else:
         print("Invalid option. Please try again.")
         return
 
-    results = [analyze_password_strength(password, word_list) for password in passwords]
-    display_results(results)
+    if not passwords:
+        print("No passwords to analyze.")
+        return
 
+    results = [analyze_password(password, word_list) for password in passwords]
+    display_analysis_results(results)
 
 if __name__ == "__main__":
     main()
